@@ -21,6 +21,11 @@ max_wait = 4
 
 * `max_wait` is the time we're willing to wait for a SUB to the topic we PUBlish on.
 
+## Example
+
+```
+OK - PUB to nagios/test at localhost responded in 0.00
+```
 
  [nagios]: http://nagios.org
  [icinga]: http://icinga.org
