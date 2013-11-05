@@ -19,7 +19,7 @@ check_payload = 'PiNG'
 max_wait = 4
 ```
 
-* `max_wait` is the time we're willing to wait for a SUB to the topic we PUBlish on.
+* `max_wait` is the time we're willing to wait for a SUB to the topic we PUBlish on. If we don't receive the MQTT PUB within this many seconds we exist with _CRITICAL_.
 
 ## Example
 
