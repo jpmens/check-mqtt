@@ -54,7 +54,7 @@ def on_publish(mosq, userdata, mid):
     pass
 
 def on_subscribe(mosq, userdata, mid, granted_qos):
-    (res, mid) =  mosq.publish(check_topic, check_payload, qos=1, retain=False)
+    (res, mid) =  mosq.publish(check_topic, check_payload, qos=2, retain=False)
 
 def on_message(mosq, userdata, msg):
     global message
