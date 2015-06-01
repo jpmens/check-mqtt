@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2013 Jan-Piet Mens <jpmens()gmail.com>
+# Copyright (c) 2013-2015 Jan-Piet Mens <jpmens()gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import mosquitto
+import paho.mqtt.client as paho
 import ssl
 import time
 import sys
@@ -82,7 +82,9 @@ def on_message(mosq, userdata, msg):
         message = "PUB to %s at %s responded in %.2f" % (check_topic, mqtt_host, elapsed)
 
 def on_disconnect(mosq, userdata, rc):
-    exitus(1, "Unexpected disconnection. Incorrect credentials?")
+
+    if rc != 0:
+        exitus(1, "Unexpected disconnection. Incorrect credentials?")
 
 def exitus(status=0, message="all is well"):
     """
@@ -97,7 +99,7 @@ userdata = {
     'have_response' : False,
     'start_time'    : time.time(),
 }
-mqttc = mosquitto.Mosquitto('nagios-%d' % (os.getpid()), clean_session=True, userdata=userdata)
+mqttc = paho.Client('nagios-%d' % (os.getpid()), clean_session=True, userdata=userdata, protocol=4)
 mqttc.on_message = on_message
 mqttc.on_connect = on_connect
 mqttc.on_disconnect = on_disconnect
@@ -112,7 +114,8 @@ mqttc.on_subscribe = on_subscribe
 #mqttc.tls_insecure_set(True)    # optional: avoid check certificate name if true
 
 # username & password may be None
-mqttc.username_pw_set(mqtt_username, mqtt_password)
+if mqtt_username is not None:
+    mqttc.username_pw_set(mqtt_username, mqtt_password)
 
 # Attempt to connect to broker. If this fails, issue CRITICAL
 
