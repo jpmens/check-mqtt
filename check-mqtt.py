@@ -32,15 +32,9 @@ import ssl
 import time
 import sys
 import os
+import argparse
 
-mqtt_host = 'localhost'
-mqtt_port = 1883
-mqtt_username = None
-mqtt_password = None
-
-check_topic = 'nagios/test'
 check_payload = 'PiNG'
-max_wait = 4
 
 status = 0
 message = ''
@@ -52,7 +46,7 @@ def on_connect(mosq, userdata, rc):
     Upon successfully being connected, we subscribe to the check_topic
     """
 
-    mosq.subscribe(check_topic, 0)
+    mosq.subscribe(args.check_topic, 0)
 
 def on_publish(mosq, userdata, mid):
     pass
@@ -64,7 +58,7 @@ def on_subscribe(mosq, userdata, mid, granted_qos):
     on_message() will fire when we see that same message
     """
 
-    (res, mid) =  mosq.publish(check_topic, check_payload, qos=2, retain=False)
+    (res, mid) =  mosq.publish(args.check_topic, check_payload, qos=2, retain=False)
 
 def on_message(mosq, userdata, msg):
     """
@@ -79,7 +73,7 @@ def on_message(mosq, userdata, msg):
         userdata['have_response'] = True
         status = 0
         elapsed = (time.time() - userdata['start_time'])
-        message = "PUB to %s at %s responded in %.2f" % (check_topic, mqtt_host, elapsed)
+        message = "PUB to %s at %s responded in %.2f" % (args.check_topic, args.mqtt_host, elapsed)
 
 def on_disconnect(mosq, userdata, rc):
 
@@ -94,6 +88,16 @@ def exitus(status=0, message="all is well"):
 
     print "%s - %s" % (nagios_codes[status], message)
     sys.exit(status)
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-H', '--host', metavar="<hostname>", help="mqtt host to connect to (defaults to localhost)", dest='mqtt_host', default="localhost")
+parser.add_argument('-P', '--port', metavar="<port>", help="network port to connect to (defaults to 1883)", dest='mqtt_port', default=1883, type=int)
+parser.add_argument('-u', '--username', metavar="<username>", help="username", dest='mqtt_username', default=None)
+parser.add_argument('-p', '--password', metavar="<password>", help="password", dest='mqtt_password', default=None)
+parser.add_argument('-t', '--topic', metavar="<topic>", help="topic to use for the check (defaults to nagios/test)", dest='check_topic', default='nagios/test')
+parser.add_argument('-m', '--max-wait', metavar="<seconds>", help="maximum time to wait for the check (defaults to 4 seconds)", dest='max_wait', default=4, type=int)
+args = parser.parse_args()
 
 userdata = {
     'have_response' : False,
@@ -114,22 +118,22 @@ mqttc.on_subscribe = on_subscribe
 #mqttc.tls_insecure_set(True)    # optional: avoid check certificate name if true
 
 # username & password may be None
-if mqtt_username is not None:
-    mqttc.username_pw_set(mqtt_username, mqtt_password)
+if args.mqtt_username is not None:
+    mqttc.username_pw_set(args.mqtt_username, args.mqtt_password)
 
 # Attempt to connect to broker. If this fails, issue CRITICAL
 
 try:
-    mqttc.connect(mqtt_host, mqtt_port, 60)
+    mqttc.connect(args.mqtt_host, args.mqtt_port, 60)
 except Exception, e:
     status = 2
-    message = "Connection to %s:%d failed: %s" % (mqtt_host, mqtt_port, str(e))
+    message = "Connection to %s:%d failed: %s" % (args.mqtt_host, args.mqtt_port, str(e))
     exitus(status, message)
 
 rc = 0
 while userdata['have_response'] == False and rc == 0:
     rc = mqttc.loop()
-    if time.time() - userdata['start_time'] > max_wait:
+    if time.time() - userdata['start_time'] > args.max_wait:
         message = 'timeout waiting for PUB'
         status = 2
         break
