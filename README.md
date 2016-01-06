@@ -36,6 +36,26 @@ Configuration can be done via the following command line arguments:
 OK - PUB to nagios/test at localhost responded in 0.00
 ```
 
+## Nagios Configuration
+
+### command definition
+```
+define command{
+        command_name    check-mqtt
+        command_line    $USER1$/check-mqtt
+        }
+```
+### service definition
+```
+define service{
+        use                             local-service
+        host_name                       localhost
+        service_description             mqtt broker
+        check_command                   check-mqtt
+        notifications_enabled           0
+        }
+```
+
  [nagios]: http://nagios.org
  [icinga]: http://icinga.org
  [mqtt]: http://mqtt.org
