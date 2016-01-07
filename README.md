@@ -1,6 +1,6 @@
 # check-mqtt
 
-A [Nagios]/[Icinga] plugin for checking connectivity to an [MQTT] broker. Or with --ignoreip monitor an mqtt application.
+A [Nagios]/[Icinga] plugin for checking connectivity to an [MQTT] broker. Or with --ignoreping monitor an mqtt application.
 
 This plugin connects to the specified broker and subscribes to a topic. Upon successful subscription, a message is published to said topic, and the plugin expects to receive that payload within `max_wait` seconds.
 
