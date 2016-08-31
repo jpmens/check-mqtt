@@ -33,11 +33,11 @@ import time
 import sys
 import os
 import argparse
-
-check_payload = 'PiNG'
+import subprocess
 
 status = 0
 message = ''
+args = {}
 
 nagios_codes = [ 'OK', 'WARNING', 'CRITICAL', 'UNKNOWN' ]
 
@@ -58,7 +58,8 @@ def on_subscribe(mosq, userdata, mid, granted_qos):
     on_message() will fire when we see that same message
     """
 
-    (res, mid) =  mosq.publish(args.check_topic, check_payload, qos=2, retain=False)
+    if not args.mqtt_readonly:
+        (res, mid) =  mosq.publish(args.check_topic, args.mqtt_payload, qos=2, retain=False)
 
 def on_message(mosq, userdata, msg):
     """
@@ -69,11 +70,17 @@ def on_message(mosq, userdata, msg):
     global message
     global status
 
-    if str(msg.payload) == check_payload:
-        userdata['have_response'] = True
+    elapsed = (time.time() - userdata['start_time'])
+    userdata['have_response'] = True
+    status = 2
+    message = "message from %s at %s in %.2fs | response_time=%.2f value=%s" % (args.check_topic, args.mqtt_host, elapsed, elapsed, str(msg.payload))
+
+    if args.mqtt_operator == 'lessthan' and msg.payload < args.mqtt_value:
         status = 0
-        elapsed = (time.time() - userdata['start_time'])
-        message = "PUB to %s at %s responded in %.2f" % (args.check_topic, args.mqtt_host, elapsed)
+    if args.mqtt_operator == 'greaterthan' and msg.payload > args.mqtt_value:
+        status = 0
+    if args.mqtt_operator == 'equal' and str(msg.payload) == args.mqtt_value:
+        status = 0
 
 def on_disconnect(mosq, userdata, rc):
 
@@ -93,11 +100,38 @@ def exitus(status=0, message="all is well"):
 parser = argparse.ArgumentParser()
 parser.add_argument('-H', '--host', metavar="<hostname>", help="mqtt host to connect to (defaults to localhost)", dest='mqtt_host', default="localhost")
 parser.add_argument('-P', '--port', metavar="<port>", help="network port to connect to (defaults to 1883)", dest='mqtt_port', default=1883, type=int)
-parser.add_argument('-u', '--username', metavar="<username>", help="username", dest='mqtt_username', default=None)
-parser.add_argument('-p', '--password', metavar="<password>", help="password", dest='mqtt_password', default=None)
-parser.add_argument('-t', '--topic', metavar="<topic>", help="topic to use for the check (defaults to nagios/test)", dest='check_topic', default='nagios/test')
+
+parser.add_argument('-u', '--username', metavar="<username>", help="MQTT username (defaults to None)", dest='mqtt_username', default=None)
+parser.add_argument('-p', '--password', metavar="<password>", help="MQTT password (defaults to None)", dest='mqtt_password', default=None)
+
 parser.add_argument('-m', '--max-wait', metavar="<seconds>", help="maximum time to wait for the check (defaults to 4 seconds)", dest='max_wait', default=4, type=int)
+
+parser.add_argument('-a', '--cafile', metavar="<cafile>", help="cafile (defaults to None)", dest='mqtt_cafile', default=None)
+parser.add_argument('-c', '--certfile', metavar="<certfile>", help="certfile (defaults to None)", dest='mqtt_certfile', default=None)
+parser.add_argument('-k', '--keyfile', metavar="<keyfile>", help="keyfile (defaults to None)", dest='mqtt_keyfile', default=None)
+parser.add_argument('-n', '--insecure', help="suppress TLS verification of server hostname", dest='mqtt_insecure', default=False, action='store_true')
+
+parser.add_argument('-t', '--topic', metavar="<topic>", help="topic to use for the check (defaults to nagios/test)", dest='check_topic', default='nagios/test')
+parser.add_argument('-r', '--readonly', help="just read the value of the topic", dest='mqtt_readonly', default=False, action='store_true')
+parser.add_argument('-l', '--payload', metavar="<payload>", help="payload which will be PUBLISHed (defaults to 'PiNG'). If it begins with !, output of the command will be used", dest='mqtt_payload', default='PiNG')
+parser.add_argument('-v', '--value', metavar="<value>", help="value to compare against received payload (defaults to 'PiNG'). If it begins with !, output of the command will be used", dest='mqtt_value', default='PiNG')
+parser.add_argument('-o', '--operator', metavar="<operator>", help="operator to compare received value with value. Coose from 'equal' (default), 'lessthan', and 'greaterthan'. 'equal' compares Strings, the other two convert the arguments to int", dest='mqtt_operator', default='equal', choices=['equal','lessthan','greaterthan'])
+
 args = parser.parse_args()
+
+#print args
+
+if args.mqtt_payload.startswith('!'):
+    try:
+     args.mqtt_payload = subprocess.check_output(args.mqtt_payload[1:], shell=True) 
+    except:
+        pass
+
+if args.mqtt_value.startswith('!'):
+    try:
+        args.mqtt_value = subprocess.check_output(args.mqtt_value[1:], shell=True) 
+    except:
+        pass
 
 userdata = {
     'have_response' : False,
@@ -110,12 +144,17 @@ mqttc.on_disconnect = on_disconnect
 mqttc.on_publish = on_publish
 mqttc.on_subscribe = on_subscribe
 
-#mqttc.tls_set('root.ca',
-#    cert_reqs=ssl.CERT_REQUIRED,
-#    tls_version=1)
-
-#mqttc.tls_set('root.ca', certfile='c1.crt', keyfile='c1.key', cert_reqs=ssl.CERT_REQUIRED, tls_version=3, ciphers=None)
-#mqttc.tls_insecure_set(True)    # optional: avoid check certificate name if true
+# cafile controls TLS usage
+if args.mqtt_cafile is not None:
+    if args.mqtt_certfile is not None:
+        mqttc.tls_set(args.mqtt_cafile,
+        certfile=args.mqtt_certfile,
+        keyfile=args.mqtt_keyfile,
+        cert_reqs=ssl.CERT_REQUIRED)
+    else:
+        mqttc.tls_set(args.mqtt_cafile,
+        cert_reqs=ssl.CERT_REQUIRED)
+    mqttc.tls_insecure_set(args.mqtt_insecure)
 
 # username & password may be None
 if args.mqtt_username is not None:
@@ -134,7 +173,7 @@ rc = 0
 while userdata['have_response'] == False and rc == 0:
     rc = mqttc.loop()
     if time.time() - userdata['start_time'] > args.max_wait:
-        message = 'timeout waiting for PUB'
+        message = 'timeout waiting for message'
         status = 2
         break
 
