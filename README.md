@@ -35,6 +35,7 @@ optional arguments:
   -t <topic>, --topic <topic>
                         topic to use for the check (defaults to nagios/test)
   -r, --readonly        just read the value of the topic
+  -S, --short           output string is shorter (more terse)
   -l <payload>, --payload <payload>
                         payload which will be PUBLISHed (defaults to 'PiNG'). If it begins with !, output of the
                         command will be used
