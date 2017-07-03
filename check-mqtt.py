@@ -41,7 +41,7 @@ args = {}
 
 nagios_codes = [ 'OK', 'WARNING', 'CRITICAL', 'UNKNOWN' ]
 
-def on_connect(mosq, userdata, rc):
+def on_connect(mosq, userdata, flags, rc):
     """
     Upon successfully being connected, we subscribe to the check_topic
     """
