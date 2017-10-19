@@ -78,14 +78,14 @@ def on_message(mosq, userdata, msg):
     else:
         message = "message from %s at %s in %.2fs | response_time=%.2f value=%s" % (args.check_topic, args.mqtt_host, elapsed, elapsed, str(msg.payload))
 
-
-    if args.mqtt_operator == 'lessthan' and msg.payload < args.mqtt_value:
+    if args.mqtt_operator == 'lessthan' and float(msg.payload) < float(args.mqtt_value):
         status = 0
-    if args.mqtt_operator == 'greaterthan' and msg.payload > args.mqtt_value:
+    if args.mqtt_operator == 'greaterthan' and float(msg.payload) > float(args.mqtt_value):
         status = 0
     if args.mqtt_operator == 'equal' and str(msg.payload) == args.mqtt_value:
         status = 0
 
+        
 def on_disconnect(mosq, userdata, rc):
 
     if rc != 0:
