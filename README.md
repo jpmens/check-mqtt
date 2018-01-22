@@ -33,16 +33,16 @@ optional arguments:
                         keyfile (defaults to None)
   -n, --insecure        suppress TLS verification of server hostname
   -t <topic>, --topic <topic>
-                        topic to use for the active check (defaults to nagios/test)
+                        topic to use sending message (defaults to nagios/test)
   -s <topic>, --subscription <topic>
-                        topic to use for the passive check (defaults to -t topic)
+                        topic to use receiving message (defaults to -t topic)
   -r, --readonly        just read the value of the topic
   -S, --short           output string is shorter (more terse)
   -l <payload>, --payload <payload>
-                        payload which will be PUBLISHed (defaults to 'PiNG') to -t topic. If it begins with !, output of the
+                        payload which will be PUBLISHed (defaults to 'PiNG') to -t <topic>. If it begins with !, output of the
                         command will be used
   -v <value>, --value <value>
-                        value to compare against received payload (defaults to 'PiNG') receive on -s topic. If it begins with !,
+                        value to compare against payload received on -s <topic> (defaults to 'PiNG'). If it begins with !,
                         output of the command will be used
   -o <operator>, --operator <operator>
                         operator to compare received value with value. Coose from 'equal' (default), 'lessthan',
