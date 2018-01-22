@@ -147,7 +147,7 @@ if args.mqtt_value.startswith('!'):
 if args.check_subscription == None:
     args.check_subscription = args.check_topic
 
-print args
+#print args
 
 userdata = {
     'have_response' : False,
