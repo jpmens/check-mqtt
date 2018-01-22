@@ -1,6 +1,6 @@
 # check-mqtt
 
-A [Nagios]/[Icinga] plugin for checking connectivity to an [MQTT] broker. Or with --ignoreping monitor an mqtt application. Or for checking the status of MQTT clients maintaining the status on an MQTT broker.
+A [Nagios]/[Icinga] plugin for checking connectivity to an [MQTT] broker. Or with --readonly monitor an mqtt application. Or for checking the status of MQTT clients maintaining the status on an MQTT broker.
 
 This plugin connects to the specified broker and subscribes to a topic. Upon successful subscription, a message is published to said topic, and the plugin expects to receive that payload within `max_wait` seconds.
 
@@ -10,7 +10,7 @@ Configuration can be done via the following command line arguments:
 
 ```
 usage: check-mqtt.py [-h] [-H <hostname>] [-P <port>] [-u <username>] [-p <password>] [-m <seconds>] [-a <cafile>]
-                     [-c <certfile>] [-k <keyfile>] [-n] [-t <topic>] [-r] [-l <payload>] [-v <value>]
+                     [-c <certfile>] [-k <keyfile>] [-n] [-t <topic>] [-s <topic>] [-r] [-l <payload>] [-v <value>]
                      [-o <operator>]
 
 optional arguments:
@@ -33,14 +33,16 @@ optional arguments:
                         keyfile (defaults to None)
   -n, --insecure        suppress TLS verification of server hostname
   -t <topic>, --topic <topic>
-                        topic to use for the check (defaults to nagios/test)
+                        topic to use for the active check (defaults to nagios/test)
+  -s <topic>, --subscription <topic>
+                        topic to use for the passive check (defaults to -t topic)
   -r, --readonly        just read the value of the topic
   -S, --short           output string is shorter (more terse)
   -l <payload>, --payload <payload>
-                        payload which will be PUBLISHed (defaults to 'PiNG'). If it begins with !, output of the
+                        payload which will be PUBLISHed (defaults to 'PiNG') to -t topic. If it begins with !, output of the
                         command will be used
   -v <value>, --value <value>
-                        value to compare against received payload (defaults to 'PiNG'). If it begins with !,
+                        value to compare against received payload (defaults to 'PiNG') receive on -s topic. If it begins with !,
                         output of the command will be used
   -o <operator>, --operator <operator>
                         operator to compare received value with value. Coose from 'equal' (default), 'lessthan',
@@ -50,8 +52,6 @@ optional arguments:
 `max_wait` is the time we're willing to wait for a SUB to the topic we PUBlish on. If we don't receive the MQTT PUB within this many seconds we exist with _CRITICAL_.
 
 ## Example
-
-
 
 ```
 ./check-mqtt.py -H localhost -P 1883 -u user -p password -t nagios/test -m 10
@@ -65,6 +65,14 @@ OK - message from nagios/test at localhost in 0.00 | response_time=0.10 value=Pi
 ./check-mqtt.py -H localhost -t devices/mydevice/lastevent -v '!expr `date +%s` - 216000' -r -o greaterthan
 
 OK - message from devices/mydevice/lastevent at localhost in 0.05s | response_time=0.05 value=1472626997
+```
+
+## Ping Pong check example
+
+```
+./check-mqtt.py -H localhost -t nagios/ListenForPing -s nagios/PublishPongTo -l ping -v pong
+
+OK - message from nagios/PublishPongTo at localhost in 0.05s | response_time=0.05 value=pong
 ```
 
 ## Nagios Configuration
