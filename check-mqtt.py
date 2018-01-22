@@ -46,7 +46,7 @@ def on_connect(mosq, userdata, flags, rc):
     Upon successfully being connected, we subscribe to the check_topic
     """
 
-    mosq.subscribe(args.check_topic, 0)
+    mosq.subscribe(args.check_subscription, 0)
 
 def on_publish(mosq, userdata, mid):
     pass
@@ -58,6 +58,7 @@ def on_subscribe(mosq, userdata, mid, granted_qos):
     on_message() will fire when we see that same message
     """
 
+    #print "on_subscribe"
     if not args.mqtt_readonly:
         (res, mid) =  mosq.publish(args.check_topic, args.mqtt_payload, qos=2, retain=False)
 
@@ -66,6 +67,8 @@ def on_message(mosq, userdata, msg):
     This is invoked when we get our own message back. Verify that it
     is actually our message and if so, we've completed a round-trip.
     """
+
+    #print "on_message", msg.topic, str(msg.payload)
 
     global message
     global status
@@ -76,7 +79,7 @@ def on_message(mosq, userdata, msg):
     if args.short_output == True:
         message = "value=%s | response_time=%.2f value=%s" % (str(msg.payload), elapsed, str(msg.payload))
     else:
-        message = "message from %s at %s in %.2fs | response_time=%.2f value=%s" % (args.check_topic, args.mqtt_host, elapsed, elapsed, str(msg.payload))
+        message = "message from %s at %s in %.2fs | response_time=%.2f value=%s" % (args.check_subscription, args.mqtt_host, elapsed, elapsed, str(msg.payload))
 
     if args.mqtt_operator == 'lessthan' and float(msg.payload) < float(args.mqtt_value):
         status = 0
@@ -117,7 +120,8 @@ parser.add_argument('-c', '--certfile', metavar="<certfile>", help="certfile (de
 parser.add_argument('-k', '--keyfile', metavar="<keyfile>", help="keyfile (defaults to None)", dest='mqtt_keyfile', default=None)
 parser.add_argument('-n', '--insecure', help="suppress TLS verification of server hostname", dest='mqtt_insecure', default=False, action='store_true')
 
-parser.add_argument('-t', '--topic', metavar="<topic>", help="topic to use for the check (defaults to nagios/test)", dest='check_topic', default='nagios/test')
+parser.add_argument('-t', '--topic', metavar="<topic>", help="topic to use for the active check (defaults to nagios/test)", dest='check_topic', default='nagios/test')
+parser.add_argument('-s', '--subscription', metavar="<subscription>", help="topic to use for the passive check (defaults to topic)", dest='check_subscription', default=None)
 parser.add_argument('-r', '--readonly', help="just read the value of the topic", dest='mqtt_readonly', default=False, action='store_true')
 parser.add_argument('-l', '--payload', metavar="<payload>", help="payload which will be PUBLISHed (defaults to 'PiNG'). If it begins with !, output of the command will be used", dest='mqtt_payload', default='PiNG')
 parser.add_argument('-v', '--value', metavar="<value>", help="value to compare against received payload (defaults to 'PiNG'). If it begins with !, output of the command will be used", dest='mqtt_value', default='PiNG')
@@ -139,6 +143,11 @@ if args.mqtt_value.startswith('!'):
         args.mqtt_value = subprocess.check_output(args.mqtt_value[1:], shell=True) 
     except:
         pass
+
+if args.check_subscription == None:
+    args.check_subscription = args.check_topic
+
+print args
 
 userdata = {
     'have_response' : False,
