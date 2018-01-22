@@ -41,7 +41,7 @@ args = {}
 
 nagios_codes = [ 'OK', 'WARNING', 'CRITICAL', 'UNKNOWN' ]
 
-def on_connect(mosq, userdata, rc):
+def on_connect(mosq, userdata, flags, rc):
     """
     Upon successfully being connected, we subscribe to the check_topic
     """
@@ -73,15 +73,21 @@ def on_message(mosq, userdata, msg):
     elapsed = (time.time() - userdata['start_time'])
     userdata['have_response'] = True
     status = 2
-    message = "message from %s at %s in %.2fs | response_time=%.2f value=%s" % (args.check_topic, args.mqtt_host, elapsed, elapsed, str(msg.payload))
+    if args.short_output == True:
+        message = "value=%s | response_time=%.2f value=%s" % (str(msg.payload), elapsed, str(msg.payload))
+    else:
+        message = "message from %s at %s in %.2fs | response_time=%.2f value=%s" % (args.check_topic, args.mqtt_host, elapsed, elapsed, str(msg.payload))
 
-    if args.mqtt_operator == 'lessthan' and msg.payload < args.mqtt_value:
+    if args.mqtt_operator == 'lessthan' and float(msg.payload) < float(args.mqtt_value):
         status = 0
-    if args.mqtt_operator == 'greaterthan' and msg.payload > args.mqtt_value:
+    if args.mqtt_operator == 'greaterthan' and float(msg.payload) > float(args.mqtt_value):
         status = 0
     if args.mqtt_operator == 'equal' and str(msg.payload) == args.mqtt_value:
         status = 0
+    if args.mqtt_operator == 'contains' and str(msg.payload).find(args.mqtt_value) != -1:
+        status = 0
 
+        
 def on_disconnect(mosq, userdata, rc):
 
     if rc != 0:
@@ -115,7 +121,8 @@ parser.add_argument('-t', '--topic', metavar="<topic>", help="topic to use for t
 parser.add_argument('-r', '--readonly', help="just read the value of the topic", dest='mqtt_readonly', default=False, action='store_true')
 parser.add_argument('-l', '--payload', metavar="<payload>", help="payload which will be PUBLISHed (defaults to 'PiNG'). If it begins with !, output of the command will be used", dest='mqtt_payload', default='PiNG')
 parser.add_argument('-v', '--value', metavar="<value>", help="value to compare against received payload (defaults to 'PiNG'). If it begins with !, output of the command will be used", dest='mqtt_value', default='PiNG')
-parser.add_argument('-o', '--operator', metavar="<operator>", help="operator to compare received value with value. Coose from 'equal' (default), 'lessthan', and 'greaterthan'. 'equal' compares Strings, the other two convert the arguments to int", dest='mqtt_operator', default='equal', choices=['equal','lessthan','greaterthan'])
+parser.add_argument('-o', '--operator', metavar="<operator>", help="operator to compare received value with value. Coose from 'equal' (default), 'lessthan', 'greaterthan' and 'contains'. 'equal' compares Strings, the other two convert the arguments to int", dest='mqtt_operator', default='equal', choices=['equal','lessthan','greaterthan','contains'])
+parser.add_argument('-S', '--short', help="use a shorter string on output", dest='short_output', default=False, action='store_true')
 
 args = parser.parse_args()
 
