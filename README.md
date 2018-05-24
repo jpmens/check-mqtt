@@ -4,6 +4,11 @@ A [Nagios]/[Icinga] plugin for checking connectivity to an [MQTT] broker. Or wit
 
 This plugin connects to the specified broker and subscribes to a topic. Upon successful subscription, a message is published to said topic, and the plugin expects to receive that payload within `max_wait` seconds.
 
+## Prerequisite
+This module needs jsonpath-rw. To install, use pip:
+
+ $ pip install jsonpath-rw
+
 ## Configuration
 
 Configuration can be done via the following command line arguments:
@@ -44,9 +49,12 @@ optional arguments:
   -v <value>, --value <value>
                         value to compare against payload received on -s <topic> (defaults to 'PiNG'). If it begins with !,
                         output of the command will be used
+  -j <path>, --jsonpath <path>
+                        if given, the value is interpreted as a JSON string and the value is extracted using the <path>
   -o <operator>, --operator <operator>
-                        operator to compare received value with value. Coose from 'equal' (default), 'lessthan',
-                        and 'greaterthan'. 'equal' compares Strings, the other two convert the arguments to int
+                        operator to compare received value with value. Choose 'eq','equal' (default), 'lt','lessthan',
+                        'gt','greaterthan' or 'ct','contain'.
+                        'equal' compares strings, the other two convert the argument to float before compare
 ```
 
 `max_wait` is the time we're willing to wait for a SUB to the topic we PUBlish on. If we don't receive the MQTT PUB within this many seconds we exist with _CRITICAL_.
@@ -73,6 +81,14 @@ OK - message from devices/mydevice/lastevent at localhost in 0.05s | response_ti
 ./check-mqtt.py -H localhost -t nagios/ListenForPing -s nagios/PublishPongTo -l ping -v pong
 
 OK - message from nagios/PublishPongTo at localhost in 0.05s | response_time=0.05 value=pong
+```
+
+## Jsonpath check example
+
+```
+./check-mqtt.py -H localhost -t devices/mydevice/sensor -v '950' -j '$.BME280.Pressure'-r -o greaterthan
+
+OK - message from devices/mydevice/sensor at localhost in 0.06s | response_time=0.06 value=1005.0
 ```
 
 ## Nagios Configuration
