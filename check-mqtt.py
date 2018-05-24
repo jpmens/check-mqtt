@@ -28,8 +28,19 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import paho.mqtt.client as paho
-from jsonpath_rw import jsonpath, parse
-import json
+import imp
+try:
+    imp.find_module('jsonpath_rw')
+    from jsonpath_rw import jsonpath, parse
+    module_jsonpath_rw = True
+except ImportError:
+    module_jsonpath_rw = False
+try:
+    imp.find_module('json')
+    import json
+    module_json = True
+except ImportError:
+    module_json = False
 import ssl
 import time
 import sys
@@ -77,16 +88,18 @@ def on_message(mosq, userdata, msg):
 
     payload = msg.payload
 
-    if args.mqtt_jsonpath is not None:
-        try:
-            jspayload = json.loads(payload)
-            jspath = parse(args.mqtt_jsonpath)
-            extractpayload = [match.value for match in jspath.find(jspayload)]
-            payload = extractpayload[0]
-        except:
-            payload = ''
-            pass
+    if module_jsonpath_rw and module_json:
+        if args.mqtt_jsonpath is not None:
+            try:
+                jspayload = json.loads(payload)
+                jspath = parse(args.mqtt_jsonpath)
+                extractpayload = [match.value for match in jspath.find(jspayload)]
+                payload = extractpayload[0]
+            except:
+                payload = ''
+                pass
 
+    print "on_message", msg.topic, str(payload)
     elapsed = (time.time() - userdata['start_time'])
     userdata['have_response'] = True
     status = 2
@@ -95,14 +108,17 @@ def on_message(mosq, userdata, msg):
     else:
         message = "message from %s at %s in %.2fs | response_time=%.2f value=%s" % (args.check_subscription, args.mqtt_host, elapsed, elapsed, str(payload))
 
-    if (args.mqtt_operator == 'lt' or args.mqtt_operator == 'lessthan') and float(payload) < float(args.mqtt_value):
-        status = 0
-    if (args.mqtt_operator == 'gt' or args.mqtt_operator == 'greaterthan') and float(payload) > float(args.mqtt_value):
-        status = 0
-    if (args.mqtt_operator == 'eq' or args.mqtt_operator == 'equal') and str(payload) == args.mqtt_value:
-        status = 0
-    if (args.mqtt_operator == 'ct' or args.mqtt_operator == 'contains') and str(payload).find(args.mqtt_value) != -1:
-        status = 0
+    try:
+        if (args.mqtt_operator == 'lt' or args.mqtt_operator == 'lessthan') and float(payload) < float(args.mqtt_value):
+            status = 0
+        if (args.mqtt_operator == 'gt' or args.mqtt_operator == 'greaterthan') and float(payload) > float(args.mqtt_value):
+            status = 0
+        if (args.mqtt_operator == 'eq' or args.mqtt_operator == 'equal') and str(payload) == args.mqtt_value:
+            status = 0
+        if (args.mqtt_operator == 'ct' or args.mqtt_operator == 'contains') and str(payload).find(args.mqtt_value) != -1:
+            status = 0
+    except:
+        pass
 
         
 def on_disconnect(mosq, userdata, rc):
@@ -139,7 +155,8 @@ parser.add_argument('-s', '--subscription', metavar="<subscription>", help="topi
 parser.add_argument('-r', '--readonly', help="just read the value of the topic", dest='mqtt_readonly', default=False, action='store_true')
 parser.add_argument('-l', '--payload', metavar="<payload>", help="payload which will be PUBLISHed (defaults to 'PiNG'). If it begins with !, output of the command will be used", dest='mqtt_payload', default='PiNG')
 parser.add_argument('-v', '--value', metavar="<value>", help="value to compare against received payload (defaults to 'PiNG'). If it begins with !, output of the command will be used", dest='mqtt_value', default='PiNG')
-parser.add_argument('-j', '--jsonpath', metavar="<jsonpath>", help="if given, the value is interpreted as a JSON string and the value is extracted using the jsonpath", dest='mqtt_jsonpath', default=None)
+if module_jsonpath_rw and module_json:
+    parser.add_argument('-j', '--jsonpath', metavar="<jsonpath>", help="if given, the value is interpreted as a JSON string and the value is extracted using the jsonpath", dest='mqtt_jsonpath', default=None)
 parser.add_argument('-o', '--operator', metavar="<operator>", help="operator to compare received value with value. Choose from 'eq' or 'equal' (default), 'lt' or 'lessthan', 'gt' or 'greaterthan' and 'ct' or 'contains'. 'eq' compares Strings, the other two convert the arguments to float", dest='mqtt_operator', default='equal', choices=['eq','equal','lt','lessthan','gt','greaterthan','ct','contains'])
 parser.add_argument('-S', '--short', help="use a shorter string on output", dest='short_output', default=False, action='store_true')
 
