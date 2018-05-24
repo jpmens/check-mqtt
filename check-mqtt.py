@@ -99,7 +99,8 @@ def on_message(mosq, userdata, msg):
                 payload = ''
                 pass
 
-    print "on_message", msg.topic, str(payload)
+    #print "on_message", msg.topic, str(payload)
+    
     elapsed = (time.time() - userdata['start_time'])
     userdata['have_response'] = True
     status = 2
