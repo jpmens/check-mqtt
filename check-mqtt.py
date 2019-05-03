@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-VER = '2.0.0000'
+VER = '3.0'
 
 # Copyright (c) 2013-2015 Jan-Piet Mens <jpmens()gmail.com>
 # All rights reserved.
@@ -30,15 +30,12 @@ VER = '2.0.0000'
 # POSSIBILITY OF SUCH DAMAGE.
 
 import paho.mqtt.client as paho
-import imp
 try:
-    imp.find_module('jsonpath_rw')
     from jsonpath_rw import jsonpath, parse
     module_jsonpath_rw = True
 except ImportError:
     module_jsonpath_rw = False
 try:
-    imp.find_module('json')
     import json
     module_json = True
 except ImportError:
@@ -50,7 +47,6 @@ import os
 import argparse
 import subprocess
 try:
-    imp.find_module('math')
     import math
     module_math = True
 except ImportError:
@@ -128,7 +124,7 @@ def on_message(mosq, userdata, msg):
     global message
     global status
 
-    payload = msg.payload
+    payload = msg.payload.decode("utf-8")
 
     if module_jsonpath_rw and module_json:
         if args.mqtt_jsonpath is not None:
@@ -197,7 +193,7 @@ def exitus(status=Status.OK, message="all is well"):
     to status
     """
 
-    print "%s - %s" % (nagios_codes[status], message)
+    print("%s - %s" % (nagios_codes[status], message))
     sys.exit(status)
 
 parser = argparse.ArgumentParser(description='Nagios/Icinga plugin for checking connectivity or status of MQTT clients on an MQTT broker.',
@@ -282,7 +278,7 @@ if args.mqtt_username is not None:
 
 try:
     mqttc.connect(args.mqtt_host, args.mqtt_port, args.keepalive)
-except Exception, e:
+except Exception as e:
     status = Status.CRITICAL
     message = "Connection to %s:%d failed: %s" % (args.mqtt_host, args.mqtt_port, str(e))
     exitus(status, message)
