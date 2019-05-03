@@ -313,9 +313,6 @@ apply Service "lastevent-health" {
 }
 ```
 
-## Partial screenshot of Nagios and check_mqtt
-![Nagios mqtt monitoring](assets/NagiosServiceCheck_mqtt.PNG?raw=true "Nagios Network Monitoring")
-
  [nagios]: http://nagios.org
  [icinga]: http://icinga.org
  [mqtt]: http://mqtt.org
