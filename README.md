@@ -5,7 +5,7 @@ A [Nagios]/[Icinga] plugin for checking connectivity to an [MQTT] broker. Or wit
 This plugin connects to the specified broker and subscribes to a topic. Upon successful subscription, a message is published to said topic, and the plugin expects to receive that payload within `max_wait` seconds.
 
 ## Prerequisite
-This module needs jsonpath-rw. To install, use `$ pip install jsonpath-rw`
+This module can use jsonpath-rw. To install, use `$ pip install jsonpath-rw`
 
 ## Configuration
 
@@ -127,7 +127,9 @@ There are no required arguments, defaults are displayed using `--help`. If `--wa
 </dl>
 
 
-## Example
+## Examples
+
+#### simple
 
 ```
 ./check-mqtt.py -H localhost -P 1883 -u user -p password -t nagios/test -m 10
@@ -135,7 +137,7 @@ There are no required arguments, defaults are displayed using `--help`. If `--wa
 OK - message from nagios/test at localhost in 0.00 | response_time=0.10 value=PiNG
 ```
 
-## Status check
+#### Status check
 
 ```
 ./check-mqtt.py -H localhost -t devices/mydevice/lastevent -v '!expr `date +%s` - 216000' -r -o greaterthan
@@ -143,7 +145,7 @@ OK - message from nagios/test at localhost in 0.00 | response_time=0.10 value=Pi
 OK - message from devices/mydevice/lastevent at localhost in 0.05s | response_time=0.05 value=1472626997
 ```
 
-## Ping Pong check
+#### Ping Pong check
 
 ```
 ./check-mqtt.py -H localhost -t nagios/ListenForPing -s nagios/PublishPongTo -l ping -v pong
@@ -151,7 +153,7 @@ OK - message from devices/mydevice/lastevent at localhost in 0.05s | response_ti
 OK - message from nagios/PublishPongTo at localhost in 0.05s | response_time=0.05 value=pong
 ```
 
-## Jsonpath check
+#### Jsonpath check
 
 ```
 ./check-mqtt.py -H localhost -t devices/mydevice/sensor -v '950' -j '$.BME280.Pressure' -r -o greaterthan
@@ -159,7 +161,7 @@ OK - message from nagios/PublishPongTo at localhost in 0.05s | response_time=0.0
 OK - message from devices/mydevice/sensor at localhost in 0.06s | response_time=0.06 value=1005.0
 ```
 
-## Jsonpath check using range (warning if lower than 4° or higher than 28°, critical if minus or higher than 35°)
+#### Jsonpath check using range (warning if lower than 4° or higher than 28°, critical if minus or higher than 35°)
 
 ```
 ./check-mqtt.py -H localhost -t devices/mydevice/sensor -v '950' -j '$.BME280.Temperature' -r --warning 'payload < 4 or payload >28' --critical 'payload < 0 or payload >35'
@@ -169,6 +171,7 @@ OK - message from devices/mydevice/sensor at localhost in 0.06s | response_time=
 
 
 ## Nagios Configuration
+
 ### command definition
 ```
 define command{
