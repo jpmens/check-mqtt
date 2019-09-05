@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-VER = '3.0'
+VER = '3.1'
 
 # Copyright (c) 2013-2015 Jan-Piet Mens <jpmens()gmail.com>
 # All rights reserved.
@@ -83,6 +83,7 @@ DEFAULTS = {
     'warning':          None,
     'critical':         None,
     'short_output':     False,
+    'debug':            False,
 }
 
 operators = ['eq','equal','lt','lessthan','gt','greaterthan','ct','contains']
@@ -98,6 +99,7 @@ def on_connect(mosq, userdata, flags, rc):
     """
 
     mosq.subscribe(args.check_subscription, 0)
+    mosq.loop()
 
 def on_publish(mosq, userdata, mid):
     pass
@@ -109,9 +111,9 @@ def on_subscribe(mosq, userdata, mid, granted_qos):
     on_message() will fire when we see that same message
     """
 
-    #print "on_subscribe"
     if not args.mqtt_readonly:
         (res, mid) =  mosq.publish(args.check_topic, args.mqtt_payload, qos=2, retain=False)
+        mosq.loop()
 
 def on_message(mosq, userdata, msg):
     """
@@ -119,7 +121,6 @@ def on_message(mosq, userdata, msg):
     is actually our message and if so, we've completed a round-trip.
     """
 
-    #print "on_message", msg.topic, str(msg.payload)
 
     global message
     global status
@@ -137,7 +138,6 @@ def on_message(mosq, userdata, msg):
                 payload = ''
                 pass
 
-    #print "on_message", msg.topic, str(payload)
     
     elapsed = (time.time() - userdata['start_time'])
     userdata['have_response'] = True
@@ -180,8 +180,9 @@ def on_message(mosq, userdata, msg):
             status = Status.CRITICAL
             pass
 
+def on_log(mosq, userdata, level, buf):
+    print(buf, file=sys.stderr)
 
-        
 def on_disconnect(mosq, userdata, rc):
 
     if rc != 0:
@@ -198,6 +199,8 @@ def exitus(status=Status.OK, message="all is well"):
 
 parser = argparse.ArgumentParser(description='Nagios/Icinga plugin for checking connectivity or status of MQTT clients on an MQTT broker.',
                                  epilog='There are no required arguments, defaults are displayed using --help. If --warning and/or --critical is used then possible given --operator and --value arguments are ignored.')
+
+parser.add_argument('-d', '--debug', default=False, help="enable MQTT logging", action='store_true', dest='debug')
 
 parser.add_argument('-H', '--host', metavar="<hostname>", help="mqtt host to connect to (default: '{}')".format(DEFAULTS['mqtt_host']), dest='mqtt_host', default=DEFAULTS['mqtt_host'])
 parser.add_argument('-P', '--port', metavar="<port>", help="network port to connect to (default: {})".format(DEFAULTS['mqtt_port']), dest='mqtt_port', default=DEFAULTS['mqtt_port'], type=int)
@@ -230,8 +233,6 @@ parser.add_argument('-V', '--version',  action='version', version=PROG)
 
 args = parser.parse_args()
 
-#print args
-
 if args.mqtt_payload.startswith('!'):
     try:
         args.mqtt_payload = subprocess.check_output(args.mqtt_payload[1:], shell=True) 
@@ -257,6 +258,9 @@ mqttc.on_connect = on_connect
 mqttc.on_disconnect = on_disconnect
 mqttc.on_publish = on_publish
 mqttc.on_subscribe = on_subscribe
+
+if args.debug:
+    mqttc.on_log = on_log
 
 # cafile controls TLS usage
 if args.mqtt_cafile is not None:

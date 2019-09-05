@@ -12,7 +12,7 @@ This module can use jsonpath-rw. To install, use `$ pip install jsonpath-rw`
 Configuration can be done via the following command line arguments:
 
 ```
-usage: check-mqtt.py [-h] [-H <hostname>] [-P <port>] [-u <username>]
+usage: check-mqtt.py [-h] [-d|--debug] [-H <hostname>] [-P <port>] [-u <username>]
                      [-p <password>] [-m <seconds>] [-e <seconds>]
                      [--sleep <seconds>] [-a <cafile>] [-C <certfile>]
                      [-k <keyfile>] [-n] [-t <topic>] [-s <subscription>] [-r]
@@ -24,6 +24,7 @@ MQTT broker.
 
 optional arguments:
   -h, --help            show this help message and exit
+  -d, --debug           enable MQTT logging
   -H <hostname>, --host <hostname>
                         mqtt host to connect to (default: 'localhost')
   -P <port>, --port <port>
