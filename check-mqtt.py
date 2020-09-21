@@ -142,7 +142,7 @@ def on_message(mosq, userdata, msg):
     elapsed = (time.time() - userdata['start_time'])
     userdata['have_response'] = True
 
-    if args.short_output == True:
+    if args.short_output:
         message = "value=%s | response_time=%.2f value=%s" % (str(payload), elapsed, str(payload))
     else:
         message = "message from %s at %s in %.2fs | response_time=%.2f value=%s" % (args.check_subscription, args.mqtt_host, elapsed, elapsed, str(payload))
@@ -245,7 +245,7 @@ if args.mqtt_value.startswith('!'):
     except:
         pass
 
-if args.check_subscription == None:
+if args.check_subscription is None:
     args.check_subscription = args.check_topic
 
 userdata = {
