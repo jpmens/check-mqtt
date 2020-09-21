@@ -148,7 +148,7 @@ def on_message(mosq, userdata, msg):
         message = "message from %s at %s in %.2fs | response_time=%.2f value=%s" % (args.check_subscription, args.mqtt_host, elapsed, elapsed, str(payload))
 
     if module_math and (args.critical is not None or args.warning is not None):
-        status == Status.OK
+        status = Status.OK
         if args.critical is not None:
             try:
                 if eval(args.critical):
