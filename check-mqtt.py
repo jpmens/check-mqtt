@@ -86,7 +86,7 @@ DEFAULTS = {
     'debug':            False,
 }
 
-operators = ['eq','equal','lt','lessthan','gt','greaterthan','ct','contains']
+operators = ['eq','equal','lt','lessthan','gt','greaterthan','ct','contains','any']
 
 status = Status.OK
 message = ''
@@ -175,6 +175,8 @@ def on_message(mosq, userdata, msg):
             if (args.mqtt_operator == 'eq' or args.mqtt_operator == 'equal') and str(payload) == args.mqtt_value:
                 status = Status.OK
             if (args.mqtt_operator == 'ct' or args.mqtt_operator == 'contains') and str(payload).find(args.mqtt_value) != -1:
+                status = Status.OK
+            if (args.mqtt_operator == 'any') and payload:
                 status = Status.OK
         except:
             status = Status.CRITICAL
