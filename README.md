@@ -5,7 +5,6 @@ A [Nagios]/[Icinga] plugin for checking connectivity to an [MQTT] broker. Or wit
 This plugin connects to the specified broker and subscribes to a topic. Upon successful subscription, a message is published to said topic, and the plugin expects to receive that payload within `max_wait` seconds.
 
 ## Prerequisite
-This module uses the [paho-mqtt] package. Currently it is not compatible to the latest version of the package (paho-mqtt 2.0.0). Please use `pip install paho-mqtt<2`, or use a virtual environment.
 
 This module can use jsonpath-rw. To install, use `$ pip install jsonpath-rw`
 

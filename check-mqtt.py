@@ -29,7 +29,8 @@ VER = '3.1'
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import paho.mqtt.client as paho
+import paho.mqtt.enums
+import paho.mqtt.client
 try:
     from jsonpath_rw import jsonpath, parse
     module_jsonpath_rw = True
@@ -254,7 +255,7 @@ userdata = {
     'have_response' : False,
     'start_time'    : time.time(),
 }
-mqttc = paho.Client('nagios-%d' % (os.getpid()), clean_session=True, userdata=userdata, protocol=4)
+mqttc = paho.mqtt.client.Client(callback_api_version=paho.mqtt.enums.CallbackAPIVersion.VERSION1, client_id='nagios-%d' % (os.getpid()), clean_session=True, userdata=userdata, protocol=4)
 mqttc.on_message = on_message
 mqttc.on_connect = on_connect
 mqttc.on_disconnect = on_disconnect
