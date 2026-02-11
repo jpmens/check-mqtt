@@ -85,6 +85,7 @@ DEFAULTS = {
     'critical':         None,
     'short_output':     False,
     'debug':            False,
+    'broker':            False,
     'mqtt_protocol':    paho.MQTTProtocolVersion.MQTTv311,
 }
 
@@ -101,7 +102,7 @@ def on_connect(mosq, userdata, flags, rc, properties):
     """
     global message
 
-    if True:
+    if args.broker:
         message = "broker CONNECT properties: %s" % properties
         userdata['have_response'] = True
     else:
@@ -221,6 +222,7 @@ parser.add_argument('-m', '--max-wait', metavar="<seconds>", help="maximum time 
 parser.add_argument('-e', '--keepalive', metavar="<seconds>", help="maximum period in seconds allowed between communications with the broker (default: {} seconds)".format(DEFAULTS['keepalive']), dest='keepalive', default=DEFAULTS['keepalive'], type=int)
 parser.add_argument('-M', '--protocol', metavar="<version>", help="MQTT protocol version (3=MQTTv31, 4=MQTTv311, 5=MQTTv5) (default: 4)".format(DEFAULTS['mqtt_protocol']), dest='mqtt_protocol', default=DEFAULTS['mqtt_protocol'], type=int)
 parser.add_argument('-T', '--tls', help="use TLS. If no cafile is specified, the operating system defaults are used {}".format(" (default)" if DEFAULTS['mqtt_tls'] else ""), dest='mqtt_tls', default=DEFAULTS['mqtt_tls'], action='store_true')
+parser.add_argument('-B', '--broker', help="show broker CONNECT properties and exit {}".format(" (default)" if DEFAULTS['broker'] else ""), dest='broker', default=DEFAULTS['broker'], action='store_true')
 parser.add_argument(      '--sleep', metavar="<seconds>", help="main loop sleep period in seconds (default: {} seconds)".format(DEFAULTS['sleep']), dest='sleep', default=DEFAULTS['sleep'], type=float)
 
 parser.add_argument('-a', '--cafile', metavar="<cafile>", help="cafile (default: {})".format(DEFAULTS['mqtt_cafile']), dest='mqtt_cafile', default=DEFAULTS['mqtt_cafile'])
