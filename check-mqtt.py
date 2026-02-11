@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-VER = '3.1'
+VER = '5.1'
 
 # Copyright (c) 2013-2015 Jan-Piet Mens <jpmens()gmail.com>
 # All rights reserved.
@@ -73,6 +73,7 @@ DEFAULTS = {
     'mqtt_certfile':    None,
     'mqtt_keyfile':     None,
     'mqtt_insecure':    False,
+    'mqtt_tls':         False,
     'check_topic':      'nagios/test',
     'check_subscription':None,
     'mqtt_readonly':    False,
@@ -84,6 +85,8 @@ DEFAULTS = {
     'critical':         None,
     'short_output':     False,
     'debug':            False,
+    'broker':            False,
+    'mqtt_protocol':    paho.MQTTProtocolVersion.MQTTv311,
 }
 
 operators = ['eq','equal','lt','lessthan','gt','greaterthan','ct','contains','any']
@@ -93,18 +96,23 @@ message = ''
 args = {}
 
 
-def on_connect(mosq, userdata, flags, rc):
+def on_connect(mosq, userdata, flags, rc, properties):
     """
     Upon successfully being connected, we subscribe to the check_topic
     """
+    global message
 
-    mosq.subscribe(args.check_subscription, 0)
+    if args.broker:
+        message = "broker CONNECT properties: %s" % properties
+        userdata['have_response'] = True
+    else:
+        mosq.subscribe(args.check_subscription, 0)
     mosq.loop()
 
-def on_publish(mosq, userdata, mid):
+def on_publish(mosq, userdata, mid, rc, properties):
     pass
 
-def on_subscribe(mosq, userdata, mid, granted_qos):
+def on_subscribe(mosq, userdata, mid, rc_list, properties):
     """
     When the subscription is confirmed, we publish our payload
     on the check_topic. Since we're subscribed to this same topic,
@@ -185,7 +193,7 @@ def on_message(mosq, userdata, msg):
 def on_log(mosq, userdata, level, buf):
     print(buf, file=sys.stderr)
 
-def on_disconnect(mosq, userdata, rc):
+def on_disconnect(mosq, userdata, flags, rc, properties):
 
     if rc != 0:
         exitus(1, "Unexpected disconnection. Incorrect credentials?")
@@ -212,6 +220,9 @@ parser.add_argument('-p', '--password', metavar="<password>", help="MQTT passwor
 
 parser.add_argument('-m', '--max-wait', metavar="<seconds>", help="maximum time to wait for the check (default: {} seconds)".format(DEFAULTS['max_wait']), dest='max_wait', default=DEFAULTS['max_wait'], type=int)
 parser.add_argument('-e', '--keepalive', metavar="<seconds>", help="maximum period in seconds allowed between communications with the broker (default: {} seconds)".format(DEFAULTS['keepalive']), dest='keepalive', default=DEFAULTS['keepalive'], type=int)
+parser.add_argument('-M', '--protocol', metavar="<version>", help="MQTT protocol version (3=MQTTv31, 4=MQTTv311, 5=MQTTv5) (default: 4)".format(DEFAULTS['mqtt_protocol']), dest='mqtt_protocol', default=DEFAULTS['mqtt_protocol'], type=int)
+parser.add_argument('-T', '--tls', help="use TLS. If no cafile is specified, the operating system defaults are used {}".format(" (default)" if DEFAULTS['mqtt_tls'] else ""), dest='mqtt_tls', default=DEFAULTS['mqtt_tls'], action='store_true')
+parser.add_argument('-B', '--broker', help="show broker CONNECT properties and exit {}".format(" (default)" if DEFAULTS['broker'] else ""), dest='broker', default=DEFAULTS['broker'], action='store_true')
 parser.add_argument(      '--sleep', metavar="<seconds>", help="main loop sleep period in seconds (default: {} seconds)".format(DEFAULTS['sleep']), dest='sleep', default=DEFAULTS['sleep'], type=float)
 
 parser.add_argument('-a', '--cafile', metavar="<cafile>", help="cafile (default: {})".format(DEFAULTS['mqtt_cafile']), dest='mqtt_cafile', default=DEFAULTS['mqtt_cafile'])
@@ -254,7 +265,27 @@ userdata = {
     'have_response' : False,
     'start_time'    : time.time(),
 }
-mqttc = paho.Client('nagios-%d' % (os.getpid()), clean_session=True, userdata=userdata, protocol=4)
+mqttc = None
+if args.mqtt_protocol == 5:
+    mqttc = paho.Client(
+        callback_api_version=paho.CallbackAPIVersion.VERSION2,
+        client_id='nagios-%d' % os.getpid(),
+        userdata=userdata,
+        protocol=args.mqtt_protocol,
+        transport='tcp',
+        manual_ack=False
+    )
+else:
+    mqttc = paho.Client(
+        callback_api_version=paho.CallbackAPIVersion.VERSION2,
+        client_id='nagios-%d' % os.getpid(),
+        clean_session=True,
+        userdata=userdata,
+        protocol=args.mqtt_protocol,
+        transport='tcp',
+        manual_ack=False
+    )
+
 mqttc.on_message = on_message
 mqttc.on_connect = on_connect
 mqttc.on_disconnect = on_disconnect
@@ -264,16 +295,19 @@ mqttc.on_subscribe = on_subscribe
 if args.debug:
     mqttc.on_log = on_log
 
-# cafile controls TLS usage
-if args.mqtt_cafile is not None:
-    if args.mqtt_certfile is not None:
-        mqttc.tls_set(args.mqtt_cafile,
-        certfile=args.mqtt_certfile,
-        keyfile=args.mqtt_keyfile,
-        cert_reqs=ssl.CERT_REQUIRED)
+# tls or cafile controls TLS usage
+if args.mqtt_tls or args.mqtt_cafile is not None:
+    if args.mqtt_cafile is not None:
+        if args.mqtt_certfile is not None:
+            mqttc.tls_set(args.mqtt_cafile,
+            certfile=args.mqtt_certfile,
+            keyfile=args.mqtt_keyfile,
+            cert_reqs=ssl.CERT_REQUIRED)
+        else:
+            mqttc.tls_set(args.mqtt_cafile,
+            cert_reqs=ssl.CERT_REQUIRED)
     else:
-        mqttc.tls_set(args.mqtt_cafile,
-        cert_reqs=ssl.CERT_REQUIRED)
+        mqttc.tls_set(cert_reqs=ssl.CERT_REQUIRED)
     mqttc.tls_insecure_set(args.mqtt_insecure)
 
 # username & password may be None
@@ -283,7 +317,25 @@ if args.mqtt_username is not None:
 # Attempt to connect to broker. If this fails, issue CRITICAL
 
 try:
-    mqttc.connect(args.mqtt_host, args.mqtt_port, args.keepalive)
+    if args.mqtt_protocol == 5:
+        mqttc.connect(
+            host=args.mqtt_host,
+            port=args.mqtt_port,
+            keepalive=args.keepalive,
+            bind_address='',
+            bind_port=0,
+            clean_start=True,
+            properties=None
+        )
+    else:
+        mqttc.connect(
+            host=args.mqtt_host,
+            port=args.mqtt_port,
+            keepalive=args.keepalive,
+            bind_address='',
+            bind_port=0,
+            properties=None
+        )
 except Exception as e:
     status = Status.CRITICAL
     message = "Connection to %s:%d failed: %s" % (args.mqtt_host, args.mqtt_port, str(e))
