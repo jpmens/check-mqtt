@@ -102,6 +102,9 @@ def on_connect(mosq, userdata, flags, rc, properties):
     """
     global message
 
+    if rc != 0:
+        exitus(Status.CRITICAL, "Connection rejected: %s" % rc)
+
     if args.broker:
         message = "broker CONNECT properties: %s" % properties
         userdata['have_response'] = True
